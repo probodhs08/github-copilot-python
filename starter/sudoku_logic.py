@@ -4,6 +4,12 @@ import random
 SIZE = 9
 EMPTY = 0
 MIN_CLUES = 17
+DIFFICULTY_CLUE_RANGES = {
+    "easy": (45, 81),
+    "medium": (35, 44),
+    "hard": (25, 34),
+}
+DIFFICULTY_GENERATION_ATTEMPTS = 10
 
 def deep_copy(board):
     return copy.deepcopy(board)
@@ -157,3 +163,20 @@ def generate_puzzle(clues=35):
 
     puzzle = deep_copy(board)
     return puzzle, solution
+
+def generate_puzzle_for_difficulty(difficulty):
+    if not isinstance(difficulty, str):
+        raise ValueError("difficulty must be Easy, Medium, or Hard")
+
+    difficulty = difficulty.strip().lower()
+    if difficulty not in DIFFICULTY_CLUE_RANGES:
+        raise ValueError("difficulty must be Easy, Medium, or Hard")
+
+    min_clues, max_clues = DIFFICULTY_CLUE_RANGES[difficulty]
+    for _ in range(DIFFICULTY_GENERATION_ATTEMPTS):
+        puzzle, solution = generate_puzzle(clues=min_clues)
+        clue_count = sum(value != EMPTY for row in puzzle for value in row)
+        if min_clues <= clue_count <= max_clues:
+            return puzzle, solution
+
+    raise RuntimeError(f"Unable to generate a {difficulty} puzzle")

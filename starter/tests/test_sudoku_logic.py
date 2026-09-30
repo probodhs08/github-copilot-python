@@ -1,4 +1,5 @@
 import sudoku_logic
+import pytest
 
 
 UNIQUE_PUZZLE = [
@@ -100,3 +101,36 @@ def test_generate_puzzle_returns_valid_solution_and_requested_clues():
         for row in range(sudoku_logic.SIZE)
         for col in range(sudoku_logic.SIZE)
     )
+
+
+@pytest.mark.parametrize(
+    ("difficulty", "clue_range"),
+    [
+        ("Easy", (45, 81)),
+        ("Medium", (35, 44)),
+        ("Hard", (25, 34)),
+    ],
+)
+def test_difficulty_generation_uses_its_clue_range_and_unique_solution(
+    difficulty, clue_range
+):
+    puzzle, _solution = sudoku_logic.generate_puzzle_for_difficulty(difficulty)
+    clue_count = sum(value != sudoku_logic.EMPTY for row in puzzle for value in row)
+
+    assert clue_range[0] <= clue_count <= clue_range[1]
+    assert sudoku_logic.count_solutions(puzzle) == 1
+
+
+def test_difficulty_clue_ranges_are_strictly_ordered():
+    easy_min, _easy_max = sudoku_logic.DIFFICULTY_CLUE_RANGES["easy"]
+    _medium_min, medium_max = sudoku_logic.DIFFICULTY_CLUE_RANGES["medium"]
+    _hard_min, hard_max = sudoku_logic.DIFFICULTY_CLUE_RANGES["hard"]
+
+    assert easy_min > medium_max
+    assert _medium_min > hard_max
+
+
+@pytest.mark.parametrize("difficulty", ["expert", "", None])
+def test_generate_puzzle_for_difficulty_rejects_unsupported_values(difficulty):
+    with pytest.raises(ValueError):
+        sudoku_logic.generate_puzzle_for_difficulty(difficulty)

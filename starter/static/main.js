@@ -38,17 +38,23 @@ function renderPuzzle(puz) {
       if (val !== 0) {
         inp.value = val;
         inp.disabled = true;
-        inp.className += ' prefilled';
+        inp.className = 'sudoku-cell prefilled';
+        inp.title = 'Prefilled clue';
+        inp.setAttribute('aria-label', `Prefilled clue ${val}, row ${i + 1}, column ${j + 1}`);
       } else {
         inp.value = '';
         inp.disabled = false;
+        inp.className = 'sudoku-cell';
+        inp.removeAttribute('title');
+        inp.setAttribute('aria-label', `Row ${i + 1}, column ${j + 1}`);
       }
     }
   }
 }
 
 async function newGame() {
-  const res = await fetch('/new');
+  const difficulty = document.getElementById('difficulty').value;
+  const res = await fetch(`/new?difficulty=${encodeURIComponent(difficulty)}`);
   const data = await res.json();
   renderPuzzle(data.puzzle);
   document.getElementById('message').innerText = '';
@@ -99,6 +105,7 @@ async function checkSolution() {
 // Wire buttons
 window.addEventListener('load', () => {
   document.getElementById('new-game').addEventListener('click', newGame);
+  document.getElementById('difficulty').addEventListener('change', newGame);
   document.getElementById('check-solution').addEventListener('click', checkSolution);
   // initialize
   newGame();
