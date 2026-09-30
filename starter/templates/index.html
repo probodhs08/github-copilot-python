@@ -2,23 +2,69 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sudoku Game</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <h1>Sudoku Game</h1>
-  <div id="sudoku-board"></div>
-  <div class="controls">
-    <label for="difficulty">Difficulty</label>
-    <select id="difficulty" name="difficulty">
-      <option value="easy">Easy</option>
-      <option value="medium" selected>Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-    <button id="new-game">New Game</button>
-    <button id="check-solution">Check Solution</button>
-    <span id="message"></span>
-  </div>
+  <header class="app-header">
+    <h1>Sudoku</h1>
+    <button id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+  </header>
+  <main>
+    <section class="game" aria-label="Sudoku game">
+      <div id="sudoku-board" role="group" aria-label="Sudoku puzzle"></div>
+      <div class="controls" aria-label="Game controls">
+        <div class="timer-display">
+          <span>Time</span>
+          <time id="timer" role="timer" aria-label="Elapsed time">00:00</time>
+        </div>
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button id="new-game" type="button">New Game</button>
+        <button id="check-solution" type="button">Check Solution</button>
+        <button id="hint" type="button">Hint</button>
+        <span id="hints-used" role="status" aria-live="polite">Hints used: 0</span>
+      </div>
+      <p id="message" role="status" aria-live="polite" aria-atomic="true"></p>
+
+      <section id="score-entry" class="score-entry" aria-labelledby="score-title" hidden>
+        <h2 id="score-title">Puzzle complete</h2>
+        <p>Save your time to the Top 10 leaderboard.</p>
+        <form id="score-form">
+          <label for="player-name">Your name</label>
+          <input id="player-name" name="player-name" type="text" maxlength="40"
+                 autocomplete="name" required>
+          <button id="save-score" type="submit">Save score</button>
+          <p id="score-error" role="alert" aria-live="assertive"></p>
+        </form>
+      </section>
+    </section>
+
+    <section class="leaderboard" aria-labelledby="leaderboard-title">
+      <h2 id="leaderboard-title">Top 10</h2>
+      <p id="leaderboard-empty">No scores yet. Complete a puzzle to enter the leaderboard.</p>
+      <div class="table-scroll" tabindex="0" aria-label="Top 10 leaderboard table">
+        <table id="leaderboard-table">
+          <caption class="visually-hidden">Fastest completed Sudoku games</caption>
+          <thead>
+            <tr>
+              <th scope="col">Rank</th>
+              <th scope="col">Player</th>
+              <th scope="col">Time</th>
+              <th scope="col">Difficulty</th>
+              <th scope="col">Hints</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body" aria-live="polite"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
   <script src="/static/main.js"></script>
 </body>
 </html>
