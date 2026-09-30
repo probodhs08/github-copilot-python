@@ -7,6 +7,7 @@
     --border: #83919a;
     --box-border: #263b47;
     --cell: #ffffff;
+    --cell-block: #e5ebee;
     --cell-prefilled: #e7edf0;
     --cell-hinted: #e5f3df;
     --cell-incorrect: #fff0e9;
@@ -29,6 +30,7 @@
     --border: #687b84;
     --box-border: #d8e5e9;
     --cell: #26353d;
+    --cell-block: #33434b;
     --cell-prefilled: #3b4b53;
     --cell-hinted: #334c37;
     --cell-incorrect: #542f2b;
@@ -108,12 +110,20 @@ main {
     padding: 0;
     border: 1px solid var(--border);
     border-radius: 0;
-    background: var(--cell);
+    background: var(--cell-background, var(--cell));
     color: var(--text);
     font: inherit;
     font-size: 20px;
     font-variant-numeric: tabular-nums;
     text-align: center;
+}
+
+.sudoku-row:nth-child(-n + 3) .sudoku-cell:nth-child(-n + 3),
+.sudoku-row:nth-child(-n + 3) .sudoku-cell:nth-child(n + 7):nth-child(-n + 9),
+.sudoku-row:nth-child(n + 4):nth-child(-n + 6) .sudoku-cell:nth-child(n + 4):nth-child(-n + 6),
+.sudoku-row:nth-child(n + 7):nth-child(-n + 9) .sudoku-cell:nth-child(-n + 3),
+.sudoku-row:nth-child(n + 7):nth-child(-n + 9) .sudoku-cell:nth-child(n + 7):nth-child(-n + 9) {
+    --cell-background: var(--cell-block);
 }
 
 .sudoku-cell:focus {
