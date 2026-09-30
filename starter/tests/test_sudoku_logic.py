@@ -1,6 +1,19 @@
 import sudoku_logic
 
 
+UNIQUE_PUZZLE = [
+    [5, 3, 0, 0, 7, 0, 0, 0, 0],
+    [6, 0, 0, 1, 9, 5, 0, 0, 0],
+    [0, 9, 8, 0, 0, 0, 0, 6, 0],
+    [8, 0, 0, 0, 6, 0, 0, 0, 3],
+    [4, 0, 0, 8, 0, 3, 0, 0, 1],
+    [7, 0, 0, 0, 2, 0, 0, 0, 6],
+    [0, 6, 0, 0, 0, 0, 2, 8, 0],
+    [0, 0, 0, 4, 1, 9, 0, 0, 5],
+    [0, 0, 0, 0, 8, 0, 0, 7, 9],
+]
+
+
 def test_create_empty_board_has_nine_rows_and_columns():
     """An empty board is a 9-by-9 grid filled with zeroes."""
     board = sudoku_logic.create_empty_board()
@@ -34,6 +47,33 @@ def test_is_safe_rejects_row_column_and_box_conflicts():
     assert not sudoku_logic.is_safe(box_board, 2, 2, 5)
 
 
+def test_count_solutions_detects_a_unique_solution_without_mutating_board():
+    """A standard Sudoku puzzle has one solution and is left unchanged."""
+    board = sudoku_logic.deep_copy(UNIQUE_PUZZLE)
+
+    assert sudoku_logic.count_solutions(board) == 1
+    assert board == UNIQUE_PUZZLE
+
+
+def test_count_solutions_stops_at_limit_for_multiple_solutions():
+    """An empty board has multiple solutions; counting stops at the limit."""
+    board = sudoku_logic.create_empty_board()
+
+    assert sudoku_logic.count_solutions(board) == 2
+    assert sudoku_logic.count_solutions(board, limit=1) == 1
+
+
+def test_count_solutions_rejects_invalid_givens():
+    """Conflicting givens have no solutions and remain unchanged."""
+    board = sudoku_logic.create_empty_board()
+    board[0][0] = 5
+    board[0][1] = 5
+    original = sudoku_logic.deep_copy(board)
+
+    assert sudoku_logic.count_solutions(board) == 0
+    assert board == original
+
+
 def test_generate_puzzle_returns_valid_solution_and_requested_clues():
     """Puzzle clues match the solution, whose rows, columns, and boxes are valid."""
     puzzle, solution = sudoku_logic.generate_puzzle(clues=40)
@@ -54,6 +94,7 @@ def test_generate_puzzle_returns_valid_solution_and_requested_clues():
             assert box == expected_digits
 
     assert sum(value != sudoku_logic.EMPTY for row in puzzle for value in row) == 40
+    assert sudoku_logic.count_solutions(puzzle) == 1
     assert all(
         puzzle[row][col] in (sudoku_logic.EMPTY, solution[row][col])
         for row in range(sudoku_logic.SIZE)
