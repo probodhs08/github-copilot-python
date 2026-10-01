@@ -31,7 +31,7 @@ function createBoardElement() {
       input.addEventListener('input', (e) => {
         const val = e.target.value.replace(/[^1-9]/g, '');
         e.target.value = val;
-        e.target.classList.remove('incorrect');
+        e.target.classList.remove('incorrect', 'missing');
         e.target.removeAttribute('aria-invalid');
         e.target.setAttribute(
           'aria-label',
@@ -247,58 +247,148 @@ function completeGame(inputs) {
 }
 
 async function checkSolution(automatic = false) {
-  if (gameCompleted || completionCheckPending) return;
-  const boardDiv = document.getElementById('sudoku-board');
-  const inputs = boardDiv.getElementsByTagName('input');
-  const board = readCurrentBoard();
-  if (automatic && !isBoardFull(board)) return;
+    if (gameCompleted) {
+        return;
+    }
 
-  completionCheckPending = true;
-  try {
-    const res = await fetch('/check', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({board})
-    });
-    const data = await res.json();
-    if (data.error) {
-      setMessage(data.error);
-      return;
+    const boardDiv = document.getElementById('sudoku-board');
+    const inputs = boardDiv.getElementsByTagName('input');
+    const board = readCurrentBoard();
+
+    if (automatic && !isBoardFull(board)) {
+        return;
     }
-    const incorrect = new Set(data.incorrect.map(x => x[0] * SIZE + x[1]));
-    let incorrectEntries = 0;
-    for (let idx = 0; idx < inputs.length; idx++) {
-      const inp = inputs[idx];
-      if (inp.disabled) continue;
-      inp.className = 'sudoku-cell';
-      if (incorrect.has(idx) && inp.value !== '') {
-        inp.className = 'sudoku-cell incorrect';
-        inp.setAttribute('aria-invalid', 'true');
-        inp.setAttribute(
-          'aria-label',
-          `Incorrect entry, row ${inp.dataset.row * 1 + 1}, column ${inp.dataset.col * 1 + 1}`
-        );
-        incorrectEntries += 1;
-      } else {
-        inp.removeAttribute('aria-invalid');
-        inp.setAttribute(
-          'aria-label',
-          `Row ${inp.dataset.row * 1 + 1}, column ${inp.dataset.col * 1 + 1}, editable cell`
-        );
-      }
+
+    // Prevent another check while this request is running.
+    completionCheckPending = true;
+
+    try {
+        const response = await fetch('/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                board: board
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Check request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            setMessage(data.error);
+            return;
+        }
+
+        const incorrectCells = Array.isArray(data.incorrect)
+            ? data.incorrect
+            : [];
+
+        const emptyCells = Array.isArray(data.empty)
+            ? data.empty
+            : [];
+
+        // Clear previous validation.
+        for (let index = 0; index < inputs.length; index++) {
+            const input = inputs[index];
+
+            if (input.disabled) {
+                continue;
+            }
+
+            input.classList.remove('incorrect', 'missing');
+            input.removeAttribute('aria-invalid');
+
+            const row = Number(input.dataset.row);
+            const col = Number(input.dataset.col);
+
+            input.setAttribute(
+                'aria-label',
+                `Row ${row + 1}, column ${col + 1}, editable cell`
+            );
+        }
+
+        // Highlight ALL incorrect filled cells.
+        for (const [row, col] of incorrectCells) {
+            const index = row * SIZE + col;
+            const input = inputs[index];
+
+            if (!input || input.disabled) {
+                continue;
+            }
+
+            input.classList.add('incorrect');
+            input.setAttribute('aria-invalid', 'true');
+
+            input.setAttribute(
+                'aria-label',
+                `Incorrect entry, row ${row + 1}, column ${col + 1}`
+            );
+        }
+
+        // Highlight ALL empty cells.
+        for (const [row, col] of emptyCells) {
+            const index = row * SIZE + col;
+            const input = inputs[index];
+
+            if (!input || input.disabled) {
+                continue;
+            }
+
+            input.classList.add('missing');
+            input.setAttribute('aria-invalid', 'true');
+
+            input.setAttribute(
+                'aria-label',
+                `Missing entry, row ${row + 1}, column ${col + 1}`
+            );
+        }
+
+        // Success ONLY when the entire board is correct.
+        if (
+            data.solved === true &&
+            incorrectCells.length === 0 &&
+            emptyCells.length === 0
+        ) {
+            completeGame(inputs);
+            return;
+        }
+
+        // Incomplete/incorrect puzzle.
+        const messages = [];
+
+        if (incorrectCells.length > 0) {
+            messages.push(
+                `${incorrectCells.length} filled ${
+                    incorrectCells.length === 1 ? 'cell is' : 'cells are'
+                } incorrect`
+            );
+        }
+
+        if (emptyCells.length > 0) {
+            messages.push(
+                `${emptyCells.length} ${
+                    emptyCells.length === 1 ? 'cell is' : 'cells are'
+                } empty`
+            );
+        }
+
+        if (messages.length > 0) {
+            setMessage(`${messages.join('. ')}.`);
+        } else {
+            setMessage('The puzzle is not solved yet.');
+        }
+
+    } catch (error) {
+        console.error('Check Solution error:', error);
+        setMessage('Unable to check the puzzle. Please try again.');
+    } finally {
+        completionCheckPending = false;
     }
-    if (data.solved) {
-      completeGame(inputs);
-    } else {
-      setMessage(incorrectEntries
-        ? `${incorrectEntries} filled ${incorrectEntries === 1 ? 'cell is' : 'cells are'} incorrect.`
-        : 'Fill every empty cell to complete the puzzle.');
-    }
-  } catch (_error) {
-    setMessage('Unable to check the puzzle. Please try again.');
-  } finally {
-    completionCheckPending = false;
-  }
 }
 
 function formatScoreTime(milliseconds) {
@@ -433,7 +523,13 @@ window.addEventListener('load', () => {
   renderLeaderboard();
   document.getElementById('new-game').addEventListener('click', newGame);
   document.getElementById('difficulty').addEventListener('change', newGame);
-  document.getElementById('check-solution').addEventListener('click', checkSolution);
+  const checkButton = document.getElementById('check-solution');
+
+  checkButton.disabled = false;
+
+  checkButton.addEventListener('click', () => {
+      checkSolution(false);
+  });
   document.getElementById('hint').addEventListener('click', useHint);
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('score-form').addEventListener('submit', saveScore);

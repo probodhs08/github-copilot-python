@@ -146,10 +146,12 @@ main {
     font-weight: bold;
 }
 
-.sudoku-cell.incorrect {
-    outline: 2px dashed var(--error);
+.sudoku-cell.incorrect,
+.sudoku-cell.missing {
+    outline: 3px solid var(--error);
     outline-offset: -3px;
     background: var(--cell-incorrect);
+    color: var(--text);
 }
 
 .sudoku-cell:nth-child(3),

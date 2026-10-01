@@ -50,17 +50,58 @@ def new_game():
 
 @app.route('/check', methods=['POST'])
 def check_solution():
-    data = request.json
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid request'}), 400
+
     board = data.get('board')
     solution = CURRENT.get('solution')
+
     if solution is None:
         return jsonify({'error': 'No game in progress'}), 400
+
+    # Validate that the submitted board is a 9x9 grid.
+    if (
+        not isinstance(board, list)
+        or len(board) != sudoku_logic.SIZE
+        or any(
+            not isinstance(row, list)
+            or len(row) != sudoku_logic.SIZE
+            for row in board
+        )
+        or any(
+            not isinstance(value, int)
+            or value < sudoku_logic.EMPTY
+            or value > sudoku_logic.SIZE
+            for row in board
+            for value in row
+        )
+    ):
+        return jsonify({'error': 'A valid 9-by-9 board is required'}), 400
+
     incorrect = []
-    for i in range(sudoku_logic.SIZE):
-        for j in range(sudoku_logic.SIZE):
-            if board[i][j] != solution[i][j]:
-                incorrect.append([i, j])
-    return jsonify({'incorrect': incorrect, 'solved': not incorrect})
+    empty = []
+
+    # Check ALL 81 cells.
+    for row in range(sudoku_logic.SIZE):
+        for col in range(sudoku_logic.SIZE):
+            value = board[row][col]
+
+            if value == sudoku_logic.EMPTY:
+                empty.append([row, col])
+            elif value != solution[row][col]:
+                incorrect.append([row, col])
+
+    # The puzzle is solved only when there are NO
+    # empty cells and NO incorrect cells.
+    solved = len(empty) == 0 and len(incorrect) == 0
+
+    return jsonify({
+        'incorrect': incorrect,
+        'empty': empty,
+        'solved': solved,
+    })
 
 @app.route('/hint', methods=['POST'])
 def get_hint():

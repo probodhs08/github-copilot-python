@@ -134,17 +134,24 @@ def test_check_without_game_returns_error():
     assert response.get_json() == {"error": "No game in progress"}
 
 
-def test_check_returns_coordinates_of_cells_that_differ():
-    """The check route reports each board cell that differs from the solution."""
-    solution = [[0 for _ in range(sudoku_logic.SIZE)] for _ in range(sudoku_logic.SIZE)]
-    board = [[0 for _ in range(sudoku_logic.SIZE)] for _ in range(sudoku_logic.SIZE)]
-    board[2][4] = 7
+def test_check_returns_all_incorrect_and_empty_coordinates():
+    """The check route reports every wrong and missing cell separately."""
+    solution = valid_solution()
+    board = [row[:] for row in solution]
+    board[0][0] = board[0][1]
+    board[2][4] = board[2][5]
+    board[1][2] = sudoku_logic.EMPTY
+    board[8][8] = sudoku_logic.EMPTY
     sudoku_app.CURRENT["solution"] = solution
 
     response = sudoku_app.app.test_client().post("/check", json={"board": board})
 
     assert response.status_code == 200
-    assert response.get_json() == {"incorrect": [[2, 4]], "solved": False}
+    assert response.get_json() == {
+        "incorrect": [[0, 0], [2, 4]],
+        "empty": [[1, 2], [8, 8]],
+        "solved": False,
+    }
 
 
 def test_check_marks_an_incomplete_board_unsolved():
@@ -156,7 +163,11 @@ def test_check_marks_an_incomplete_board_unsolved():
     response = sudoku_app.app.test_client().post("/check", json={"board": board})
 
     assert response.status_code == 200
-    assert response.get_json() == {"incorrect": [[0, 0]], "solved": False}
+    assert response.get_json() == {
+        "incorrect": [],
+        "empty": [[0, 0]],
+        "solved": False,
+    }
 
 
 def test_check_marks_a_full_but_incorrect_board_unsolved():
@@ -168,7 +179,11 @@ def test_check_marks_a_full_but_incorrect_board_unsolved():
     response = sudoku_app.app.test_client().post("/check", json={"board": board})
 
     assert response.status_code == 200
-    assert response.get_json() == {"incorrect": [[0, 0]], "solved": False}
+    assert response.get_json() == {
+        "incorrect": [[0, 0]],
+        "empty": [],
+        "solved": False,
+    }
 
 
 def test_check_marks_a_correctly_solved_board_without_exposing_solution():
@@ -180,7 +195,7 @@ def test_check_marks_a_correctly_solved_board_without_exposing_solution():
     )
 
     assert response.status_code == 200
-    assert response.get_json() == {"incorrect": [], "solved": True}
+    assert response.get_json() == {"incorrect": [], "empty": [], "solved": True}
 
 
 def test_hint_returns_one_correct_empty_cell_without_exposing_solution():
